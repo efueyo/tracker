@@ -1,15 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"strings"
+	"time"
 )
 
 type Label struct {
-	Name  string
-	Value string
+	Name  string `json:"n"`
+	Value string `json:"v"`
 }
 
 type Labels []Label
@@ -38,6 +41,14 @@ func init() {
 	flag.StringVar(&task, "t", "", "task name")
 }
 
+type Tick struct {
+	Project string    `json:"p"`
+	Task    string    `json:"n"`
+	Action  string    `json:"a"`
+	Labels  Labels    `json:"l"`
+	Time    time.Time `json:"t"`
+}
+
 func main() {
 	flag.Parse()
 	fmt.Println("Hi from the test")
@@ -49,11 +60,20 @@ func main() {
 	fmt.Printf("Your labels: %+v\n", labels)
 	action, err := getAction()
 	if err != nil {
-		fmt.Printf("Action error: %+v\n", err)
-		os.Exit(1)
+		panic(err)
 	}
 	fmt.Printf("Your action: %+v\n", action)
-
+	tick := Tick{
+		Project: project,
+		Task:    task,
+		Action:  action,
+		Labels:  labels,
+		Time:    time.Now(),
+	}
+	err = saveTick(tick)
+	if err != nil {
+		panic(err)
+	}
 }
 
 var ErrMissingAction = fmt.Errorf("no action was provided, please specify start or end")
@@ -74,5 +94,30 @@ func getAction() (string, error) {
 		return "", ErrInvalidAction
 	}
 	return action, nil
+}
 
+func saveTick(tick Tick) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	ticksURL := path.Join(homeDir, ".tracker/ticks.jsonl")
+	err = os.MkdirAll(path.Dir(ticksURL), 0750)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	f, err := os.OpenFile(ticksURL, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	line, err := json.Marshal(tick)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(append(line, []byte("\n")...))
+	if err != nil {
+		return err
+	}
+	return nil
 }
