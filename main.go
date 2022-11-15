@@ -45,24 +45,19 @@ type Tick struct {
 	Project string    `json:"p"`
 	Task    string    `json:"n"`
 	Action  string    `json:"a"`
-	Labels  Labels    `json:"l"`
+	Labels  Labels    `json:"l,omitempty"`
 	Time    time.Time `json:"t"`
 }
 
 func main() {
 	flag.Parse()
-	fmt.Println("Hi from the test")
-	fmt.Printf("Your project: %+v\n", project)
-	fmt.Printf("Your task: %+v\n", task)
 	if task == "" {
 		panic("task parameter cannot be empty")
 	}
-	fmt.Printf("Your labels: %+v\n", labels)
 	action, err := getAction()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Your action: %+v\n", action)
 	tick := Tick{
 		Project: project,
 		Task:    task,
